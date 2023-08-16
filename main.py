@@ -1,98 +1,132 @@
-################################################################################################
-# regras para depósito:
-# 1. apenas valores positivos
-# 2. todos os depósitos devem ser armazenados em uma variável e exibidos na operação extrato
-#
-# regras para saque:
-# 1. deve permitir apenas 3 operações de saque com limite de 500 por saque
-# 2. deve exibir uma mensagem de saldo insuficiente caso não tenha saldo na conta
-# 3. todos os saques devem ser armazenados em uma variável e exibidos na operação extrato
-#
-# regras para extrato:
-# 1. deve listar todos os depósitos e saques realizados na conta
-# 2. no final da listagem deve exibir o saldo atual da conta
-# 3. se o extrato estiver em branco, exibir a mensagem 'Não foram realizadas movimentações.'
-# 4. os valores devem ser exibidos utilizando o formato 'R$ xxx.xx'
-################################################################################################
-
-# construindo o menu de opções
 menu = """
 
-[1] Depósito
-[2] Saque
-[3] Extrato
-[0] Sair
+[d] Depositar
+[s] Sacar
+[e] Extrato
+[q] Sair
+--------------------
+[u] Cadastra usuário
+[c] Cadastra conta
 
-"""
+=> """
 
-# definindo as variáveis e constantes de acordo com as regras de negócio
 saldo = 0
-limite_por_operacao = 500
+limite = 500
 extrato = ""
-saques_realizados = 0
+numero_saques = 0
 LIMITE_SAQUES = 3
+AGENCIA = "0001"
+numero_conta = 1
+usuarios = list()
+contas = list()
 
-# laço de controle das operações
+def atualiza_saldo(saldo_atual, operacao):
+    global saldo
+    global extrato
+    global numero_saques
+
+    if operacao == "saque":
+        saldo -= saldo_atual
+        extrato += f"Saque: R$ {saldo_atual:.2f}\n"
+        numero_saques += 1
+
+    elif operacao == "deposito":
+        saldo += saldo_atual
+        extrato += f"Depósito: R$ {saldo_atual:.2f}\n"
+
+    else:
+        print("Operação inválida.")
+
+def executa_extrato(saldo, /, extrato):
+    print("\n================ EXTRATO ================")
+    print("Não foram realizadas movimentações." if extrato == "" else extrato)
+    print(f"\nSaldo: R$ {saldo:.2f}")
+    print("==========================================")
+
+def executa_saque(saldo, valor, extrato, limite, numero_saques, limite_saques):
+    excedeu_saldo = valor > saldo
+    excedeu_limite = valor > limite
+    excedeu_saques = numero_saques >= LIMITE_SAQUES
+
+    if excedeu_saldo:
+        print("Operação falhou! Você não tem saldo suficiente.")
+
+    elif excedeu_limite:
+        print("Operação falhou! O valor do saque excede o limite.")
+
+    elif excedeu_saques:
+        print("Operação falhou! Número máximo de saques excedido.")
+
+    elif valor > 0:
+        atualiza_saldo(valor, "saque")
+
+    else:
+        print("Operação falhou! O valor informado é inválido.")
+
+def executa_deposito(saldo, valor, extrato):
+    if valor > 0:
+        atualiza_saldo(valor, "deposito")
+
+    else:
+        print("Operação falhou! O valor informado é inválido.")
+
+def verifica_cpf(numero):
+    cpf_buscado = numero
+
+    for valor in usuarios:
+        if valor[0] == cpf_buscado:
+            return valor
+
+def cadastra_usuario():
+    cpf = str(input("Informe o CPF: "))
+    cpf = cpf.replace('.', '')
+    cpf = cpf.replace('-', '')
+
+    if not verifica_cpf(cpf):
+        nome = str(input("Informe o nome: "))
+        data_nascimento = str(input("Informe a data de nascimento: "))
+        endereco = str(input("Informe o endereço: "))
+        usuarios.append([cpf, nome, data_nascimento, endereco])
+    else:
+        print(f"CPF já cadastrado: {cpf}")
+
+def cadastra_conta(agencia, cliente, conta):
+    global numero_conta
+    contas.append([agencia, cliente, conta])
+    numero_conta += 1
+    print(f"Clientes: {usuarios}")
+    print(f"Contas: {contas}")
+
 while True:
 
-    # exibe o menu de opções
     opcao = input(menu)
 
-    # tratamento da opção de depósito
-    if opcao == "1":
-        valor_deposito = float(input("Informe o valor do depósito: "))
+    if opcao == "d":
+        valor = float(input("Informe o valor do depósito: "))
+        executa_deposito(saldo, valor, extrato)
 
-        # verifica se o valor depositado é um inteiro positivo válido
-        if valor_deposito <= 0:
-            print("Valor de depósito inválido, por favor faça o depósito novamente.")
+    elif opcao == "s":
+        valor = float(input("Informe o valor do saque: "))
+        executa_saque(saldo=saldo, valor=valor, extrato=extrato, limite=limite, numero_saques=numero_saques, limite_saques=LIMITE_SAQUES)
+
+    elif opcao == "e":
+        executa_extrato(saldo, extrato=extrato)
+
+    elif opcao == "u":
+        cadastra_usuario()
+
+    elif opcao == "c":
+        cpf = str(input("Informe o CPF do cliente: "))
+        if verifica_cpf(cpf):
+            user = verifica_cpf(cpf)
+            cadastra_conta(AGENCIA, user, numero_conta)
+            print("Conta cadastrada com sucesso!")
         else:
-            # exibe o valor depositado e atualiza as variáveis
-            print(f"Valor depositado: R$ {valor_deposito:.2f}")
-            extrato += f'''Depósito: R$ {valor_deposito:.2f}\n'''
-            saldo += valor_deposito
+            print("Cliente não encontrado!")
 
-    # tratamento da opção de saque
-    elif opcao == "2":
-        valor_saque = float(input("Informe o valor do saque: "))
-
-        # verifica se o valor sacado é um inteiro positivo válido
-        if valor_saque <= 0:
-            print("Valor de depósito inválido, por favor faça o saque novamente.")
-
-        # verifica se o saldo é maior que 0 e se o valor sacado é menor ou igual ao saldo
-        elif saldo > 0 and valor_saque <= saldo:
-            #verifica o limite de operações diárias
-            if saques_realizados == LIMITE_SAQUES:
-                print("Não foi possível efetuar o saque: limite de operações diárias atingido.")
-            # verifica se o valor do saque é maior que o limite permitido por operação
-            elif valor_saque > limite_por_operacao:
-                print(f"Não foi possível efetuar o saque: valor maior que limite por operação (R$ {limite_por_operacao:.2f}).")
-            else:
-                # exibe o valor sacado e atualiza as variáveis
-                print(f"Saque efetuado: R$ {valor_saque:.2f}")
-                extrato += f'''Saque: R$ {valor_saque:.2f}\n'''
-                saques_realizados += 1
-                saldo -= valor_saque
-            
-        else:
-            print(f"Saldo insufuciente: R$ {saldo:.2f}")
-
-    # tratamento da opção de extrato
-    elif opcao == "3":
-        # verifica se o extrato está vazio
-        if len(extrato) == 0:
-            print("Não foram realizadas movimentações.")
-
-        else:
-            # exibe o extrato e o saldo atual formatado
-            print(extrato)
-            print(f"Saldo atual: R$ {saldo:.2f}")
-    
-    # tratamento da opção de sair
-    elif opcao == "0":
-        print("Obrigado por utilizar nossos serviços.")
+    elif opcao == "q":
+        print("Obrigado por utilizar nossos serviços!")
         break
-    
-    # tratamento das opções inválidas
+
     else:
-        print("Operação inválida, por favor informe novamente a opção desejada.")
+        print("Operação inválida, por favor selecione novamente a operação desejada.")
